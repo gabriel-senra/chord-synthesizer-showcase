@@ -1,43 +1,45 @@
 # Chord Synthesizer
 
-This ESP32 instrument uses AMY to play complete chords from physical buttons. It supports seventh- and ninth-chord construction, chord-quality modifiers, octave and patch changes, and volume control through a rotary encoder.
+This is an ESP32-based instrument that plays complete chords from physical buttons. Instead of playing every note separately on a keyboard, the player selects a chord and changes its octave, sound or harmonic character through the controls.
 
-**C++ / C · ESP32 · AMY · I2S**
+For example, a C major seventh chord contains C, E, G and B; adding D makes a C major ninth. The firmware supports these richer chord types as simultaneous notes. In the control-surface version described here, pressing a new chord replaces the previous one.
 
-## How it works
+The firmware is written in C/C++. **AMY**, the synthesis engine, turns note events into sound. **I2S**, a digital audio connection, carries the output from the ESP32 to the audio hardware.
 
-The firmware scans buttons and an encoder, resolves the selected harmony, and sends note events to AMY. AMY produces the audio through I2S. In the control-surface version described here, several notes sound within one chord, but only one chord is active at a time.
+## Engineering challenges and solutions
 
-## Engineering challenges and how they are handled
+### Connecting several controls with limited input pins
 
-### Reading several controls without dedicating a GPIO to each one
+A microcontroller has a limited number of general-purpose input/output pins, or **GPIOs**. Giving every button its own pin would quickly use them up.
 
-The control surface has note, modifier and setting buttons as well as an encoder. Chained input shift registers let the firmware read these inputs through a small shared interface. The firmware turns the sampled bits into button states and encoder transitions before applying musical actions.
+The control surface uses chained **input shift registers**. These chips capture several button states and send them back through a shared serial connection. The firmware reads those states, decodes the rotary encoder and applies the resulting musical actions.
 
-This reduces the GPIO requirement, but polling still needs to be frequent enough to capture encoder movement. Input behavior during rapid playing remains an area for hardware testing.
+This saves pins, but the firmware still has to poll frequently enough to capture encoder movement. Fast control changes need testing on the physical build.
 
-### Keeping richer chords within the synthesis budget
+### Playing extended chords without accumulating too many voices
 
-A single button can produce several simultaneous notes, and extensions add more voices. The firmware bounds the harmony complexity and replaces the active chord when a new chord is pressed. That keeps the note lifecycle manageable on the target board rather than allowing held chords to accumulate indefinitely.
+A **voice** is a sounding note that consumes synthesis resources. A ninth chord requires more simultaneous notes than a simple three-note chord. Sustaining several extended chords independently could quickly increase the resource demand.
 
-The tradeoff is intentional: this version plays one multi-note chord at a time instead of sustaining several independently held chords.
+The firmware limits harmony complexity and keeps one chord active at a time. Several notes sound together within that chord, but a new chord first releases the old one. This keeps resource use and note ownership manageable, with the tradeoff that independently held chords do not overlap in this version.
 
-### Releasing the correct notes after harmony changes
+### Preventing notes from being left sounding after a change
 
-A chord may change because of a new button, an octave adjustment or a modifier. The firmware retains the active note list and explicitly stops those notes before starting the replacement harmony. Releasing a note button stops the chord only when that button owns the sounding chord.
+Changing a chord's octave or quality changes the pitches that must be released later. Recomputing the old chord from new settings would risk sending note-off events for the wrong pitches.
 
-The sequence avoids losing track of which notes need note-off events. Audible transitions, release behavior and simultaneous button presses still need to be checked on the current device.
+The firmware retains the list of notes it started. It stops those exact notes before starting the replacement harmony. It also records which button owns the sounding chord, so releasing an older button does not stop a newer chord.
 
-### Turning musical settings into concrete note events
+This gives note-on and note-off events a clear lifecycle. Audible releases, rapid changes and simultaneous presses still need checking on the current device.
 
-The harmony code is separate from the input scan and AMY event helpers. It takes the degree, root, voicing level, bass setting and quality override and produces a bounded note list. The firmware then emits note-on and note-off events for those pitches.
+### Testing harmony without needing the hardware
 
-Keeping these responsibilities separate makes the harmony calculations testable on a host computer without an ESP32 or audio output. Host checks cover note-count bounds and MIDI range; they do not establish sound quality or hardware timing.
+The harmony calculations are separate from button scanning and AMY calls. They take a scale position, root pitch, voicing level, bass option and quality override, then produce a bounded list of notes.
 
-## Remaining work
+That separation lets host-side tests check note counts and MIDI pitch ranges without flashing a board. **MIDI note numbers** represent pitches numerically; this does not mean the instrument requires an external MIDI keyboard. Host tests establish properties of the calculations, while sound and timing still need device tests.
 
-The firmware includes time-gated button changes, but that is different from requiring an input to remain continuously stable before accepting it. Stable-interval debounce, rapid encoder changes and startup/release behavior need further hardware validation.
+## Current status
 
-Earlier versions include OLED display work; that display is not part of the control-surface version described here. A current hardware demonstration will establish the exact configuration being shown.
+The control-surface firmware includes chord buttons, quality modifiers, octave and sound-preset changes, plus encoder-based volume and mute. Earlier versions also contain OLED display work; the display is not part of the version described here.
 
-Full firmware, harmony tables and product hardware designs remain private.
+Button handling currently filters changes by elapsed time. A filter that requires the input to remain stable for a full interval is a separate improvement. That work, rapid-encoder testing and a current hardware demonstration remain outstanding.
+
+Full firmware, harmony tables and hardware product designs remain private.
