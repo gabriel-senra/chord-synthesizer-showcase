@@ -32,6 +32,7 @@ flowchart TD
 
 ## Code example
 
+A [standalone debounce example](https://github.com/gabriel-senra/engineering-examples) demonstrates stable-interval filtering and unsigned clock rollover in hardware-independent C++. It was prepared separately from the firmware and uses a different debounce strategy.
 
 The private harmony module also passed 5,376 host-side valid-domain checks added during this review. Those checks exercise note-count bounds, MIDI range and output-buffer sentinels; they do not validate AMY integration, sound quality, wiring or real-time performance.
 
