@@ -1,31 +1,40 @@
 # Chord Synthesizer
 
-Chord Synthesizer is an ESP32 instrument that plays complete chords from physical buttons. The idea is to let someone explore extended harmonies without playing every note separately on a keyboard. The controls change the chord, octave, sound and volume.
+An ESP32 instrument for playing full chords from physical buttons. Choose a chord, change its character and explore the sound without playing every note separately on a keyboard.
 
-For example, C major seventh contains C, E, G and B. Adding D makes C major ninth. The instrument plays those notes together, with one chord active at a time.
+**Built with:** C/C++, ESP32 and AMY · **Current form:** control-surface firmware
 
-## How it works
+## What you can play
 
-### Controls
+A C major seventh contains **C, E, G and B**. Add **D** and it becomes a C major ninth. The instrument plays those notes together from a chord selection.
 
-Chained input shift registers collect several button states over a shared serial connection, reducing the number of ESP32 pins needed. The firmware reads these states and the rotary encoder, then applies chord selections, quality modifiers, octave changes, sound presets, volume or mute.
+- Select a chord with the buttons.
+- Change its quality or octave.
+- Choose a sound preset.
+- Adjust volume or mute with the rotary encoder.
 
-### Harmony
+One chord sounds at a time. Selecting another releases the previous chord and starts the new one; the notes within each chord sound together.
 
-The harmony code takes a scale position, root pitch, voicing level, bass option and quality override, then produces a bounded list of notes. Pitches use MIDI note numbers. This calculation is separate from the button scanning and audio calls, so it can be tested on a computer without flashing the board.
+## From a button press to sound
 
-### Sound
+**Read the controls.** Input chips collect several button states through a shared connection, so each button does not need its own ESP32 pin. The firmware reads those states alongside the encoder.
 
-The C/C++ firmware sends note events to AMY, the synthesis engine. AMY turns the notes into audio, and I2S, a digital audio connection, carries the output to the audio hardware.
+**Choose the notes.** The harmony code combines the selected scale position, root pitch, voicing and modifiers into a list of notes. This part runs separately from the physical controls and can be tested on a computer.
 
-Selecting a new chord releases the previous chord before starting its replacement. Several notes can sound within a chord, but independently held chords do not overlap. This places a bound on the number of active notes.
+**Play the chord.** AMY, the synthesis engine, turns note events into sound. A digital audio connection carries the output from the ESP32 to the audio hardware.
 
-The firmware stores the exact notes it started and the button that owns them. It releases those stored pitches when the chord changes. Releasing an older button therefore does not stop a newer chord, and an octave or quality change does not alter which old notes need to stop.
+**Release the right notes.** The firmware remembers the pitches it started and the button that owns them. Changing the octave does not lose track of the old notes, and releasing an older button does not stop a newer chord.
 
-## Current version
+Keeping one active chord bounds the number of sounding notes and gives each button press a clear musical result.
 
-The control-surface firmware includes chord buttons, quality modifiers, octave and preset changes, plus encoder-based volume and mute. OLED display work exists in earlier versions but is not part of this version.
+## Where it stands
 
-Host-side tests check note counts and pitch ranges. Rapid encoder changes, simultaneous presses and audible note releases still need checks on the current device. Button handling uses an elapsed-time filter; requiring a stable input for a full interval is a remaining improvement. A current hardware demo is pending.
+The firmware includes the chord, quality, octave, preset, volume and mute controls described above. Computer-based tests check note counts and pitch ranges.
+
+A current hardware demo and physical checks of fast control changes are pending. The button filter also needs refinement. Display work exists in earlier versions but is not included in this version.
+
+## Further reading
+
+[Controls, harmony, note handling and testing](docs/implementation.md)
 
 Full firmware, harmony tables and hardware designs remain private.
