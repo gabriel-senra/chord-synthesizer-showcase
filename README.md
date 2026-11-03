@@ -1,45 +1,31 @@
 # Chord Synthesizer
 
-This is an ESP32-based instrument that plays complete chords from physical buttons. Instead of playing every note separately on a keyboard, the player selects a chord and changes its octave, sound or harmonic character through the controls.
+Chord Synthesizer is an ESP32 instrument that plays complete chords from physical buttons. The idea is to let someone explore extended harmonies without playing every note separately on a keyboard. The controls change the chord, octave, sound and volume.
 
-For example, a C major seventh chord contains C, E, G and B; adding D makes a C major ninth. The firmware supports these richer chord types as simultaneous notes. In the control-surface version described here, pressing a new chord replaces the previous one.
+For example, C major seventh contains C, E, G and B. Adding D makes C major ninth. The instrument plays those notes together, with one chord active at a time.
 
-The firmware is written in C/C++. **AMY**, the synthesis engine, turns note events into sound. **I2S**, a digital audio connection, carries the output from the ESP32 to the audio hardware.
+## How it works
 
-## Engineering challenges and solutions
+### Controls
 
-### Connecting several controls with limited input pins
+Chained input shift registers collect several button states over a shared serial connection, reducing the number of ESP32 pins needed. The firmware reads these states and the rotary encoder, then applies chord selections, quality modifiers, octave changes, sound presets, volume or mute.
 
-A microcontroller has a limited number of general-purpose input/output pins, or **GPIOs**. Giving every button its own pin would quickly use them up.
+### Harmony
 
-The control surface uses chained **input shift registers**. These chips capture several button states and send them back through a shared serial connection. The firmware reads those states, decodes the rotary encoder and applies the resulting musical actions.
+The harmony code takes a scale position, root pitch, voicing level, bass option and quality override, then produces a bounded list of notes. Pitches use MIDI note numbers. This calculation is separate from the button scanning and audio calls, so it can be tested on a computer without flashing the board.
 
-This saves pins, but the firmware still has to poll frequently enough to capture encoder movement. Fast control changes need testing on the physical build.
+### Sound
 
-### Playing extended chords without accumulating too many voices
+The C/C++ firmware sends note events to AMY, the synthesis engine. AMY turns the notes into audio, and I2S, a digital audio connection, carries the output to the audio hardware.
 
-A **voice** is a sounding note that consumes synthesis resources. A ninth chord requires more simultaneous notes than a simple three-note chord. Sustaining several extended chords independently could quickly increase the resource demand.
+Selecting a new chord releases the previous chord before starting its replacement. Several notes can sound within a chord, but independently held chords do not overlap. This places a bound on the number of active notes.
 
-The firmware limits harmony complexity and keeps one chord active at a time. Several notes sound together within that chord, but a new chord first releases the old one. This keeps resource use and note ownership manageable, with the tradeoff that independently held chords do not overlap in this version.
+The firmware stores the exact notes it started and the button that owns them. It releases those stored pitches when the chord changes. Releasing an older button therefore does not stop a newer chord, and an octave or quality change does not alter which old notes need to stop.
 
-### Preventing notes from being left sounding after a change
+## Current version
 
-Changing a chord's octave or quality changes the pitches that must be released later. Recomputing the old chord from new settings would risk sending note-off events for the wrong pitches.
+The control-surface firmware includes chord buttons, quality modifiers, octave and preset changes, plus encoder-based volume and mute. OLED display work exists in earlier versions but is not part of this version.
 
-The firmware retains the list of notes it started. It stops those exact notes before starting the replacement harmony. It also records which button owns the sounding chord, so releasing an older button does not stop a newer chord.
+Host-side tests check note counts and pitch ranges. Rapid encoder changes, simultaneous presses and audible note releases still need checks on the current device. Button handling uses an elapsed-time filter; requiring a stable input for a full interval is a remaining improvement. A current hardware demo is pending.
 
-This gives note-on and note-off events a clear lifecycle. Audible releases, rapid changes and simultaneous presses still need checking on the current device.
-
-### Testing harmony without needing the hardware
-
-The harmony calculations are separate from button scanning and AMY calls. They take a scale position, root pitch, voicing level, bass option and quality override, then produce a bounded list of notes.
-
-That separation lets host-side tests check note counts and MIDI pitch ranges without flashing a board. **MIDI note numbers** represent pitches numerically; this does not mean the instrument requires an external MIDI keyboard. Host tests establish properties of the calculations, while sound and timing still need device tests.
-
-## Current status
-
-The control-surface firmware includes chord buttons, quality modifiers, octave and sound-preset changes, plus encoder-based volume and mute. Earlier versions also contain OLED display work; the display is not part of the version described here.
-
-Button handling currently filters changes by elapsed time. A filter that requires the input to remain stable for a full interval is a separate improvement. That work, rapid-encoder testing and a current hardware demonstration remain outstanding.
-
-Full firmware, harmony tables and hardware product designs remain private.
+Full firmware, harmony tables and hardware designs remain private.
