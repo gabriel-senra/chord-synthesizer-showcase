@@ -22,10 +22,8 @@ Selecting a new chord releases the previous chord before starting its replacemen
 
 The firmware stores the exact notes it started and the button that owns them. It releases those stored pitches when the chord changes. Releasing an older button therefore does not stop a newer chord, and an octave or quality change does not alter which old notes need to stop.
 
-## Current version
+## Button filtering and tests
 
-The control-surface firmware includes chord buttons, quality modifiers, octave and preset changes, plus encoder-based volume and mute. OLED display work exists in earlier versions but is not part of this version.
-
-Host-side tests check note counts and pitch ranges. Rapid encoder changes, simultaneous presses and audible note releases still need checks on the current device. Button handling uses an elapsed-time filter; requiring a stable input for a full interval is a remaining improvement. A current hardware demo is pending.
+Button handling uses an elapsed-time filter. Host-side tests check chord note counts and MIDI pitch ranges.
 
 Full firmware, harmony tables and hardware designs remain private.

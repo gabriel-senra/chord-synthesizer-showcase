@@ -2,7 +2,7 @@
 
 An ESP32 instrument for playing full chords from physical buttons. Choose a chord, change its character and explore the sound without playing every note separately on a keyboard.
 
-**Built with:** C/C++, ESP32 and AMY · **Current form:** control-surface firmware
+**Built with:** C/C++, ESP32 and AMY
 
 ## What you can play
 
@@ -27,11 +27,9 @@ One chord sounds at a time. Selecting another releases the previous chord and st
 
 Keeping one active chord bounds the number of sounding notes and gives each button press a clear musical result.
 
-## Where it stands
+## Tests
 
-The firmware includes the chord, quality, octave, preset, volume and mute controls described above. Computer-based tests check note counts and pitch ranges.
-
-A current hardware demo and physical checks of fast control changes are pending. The button filter also needs refinement. Display work exists in earlier versions but is not included in this version.
+Firmware tests run on a computer and check chord note counts and pitch ranges.
 
 ## Further reading
 
